@@ -1,0 +1,55 @@
+                        CAR BATTERY / 12–14V
+                               |
+                            [3A Fuse]
+                               |
+                           Diode 1N4005
+                               |
+              +----------------+--------------------+
+              |                |                    |
+              |                +----||----+         |
+              |                     1000µF |        |
+        WS2815 LED STRIP                  GND   Buck Converter
+             +12V                               (12V → 5V)
+                                                    |
+                                                    |
+                                                    +----> 5V → Arduino VCC
+                                                    |
+                                                    +----> GND → Arduino GND
+              
+              
+              
+              
+
+
+LED DATA CONTROL
+----------------
+
+Arduino D6
+    |
+  [330 Ω]
+    |
+    +---------------------> WS2815 DI
+
+IGNITION DETECTION (OPTO ISOLATED)
+----------------------------------
+
+IGNITION 12V
+      |
+  [1A Fulse]
+      |
+   [2.2k Ω]
+      |
+      |---->|  PC817 LED
+            |
+           GND
+
+
+Arduino Side
+------------
+
+5V ----[10k Ω pull-up]----+---- Arduino D5
+                        |
+                   PC817 Collector
+                   PC817 Emitter
+                        |
+                       GND
