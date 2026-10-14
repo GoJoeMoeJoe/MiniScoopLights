@@ -1,6 +1,7 @@
 // Mini hood-scoop lights.
 // Ignition on:  strip dark.
-// Ignition off: red center-out fill, then a Knight Rider sweep that steps down over time:
+// Ignition off: white center-out fill, then a Knight Rider sweep (fixed or random color per park)
+//               that steps down over time:
 //   stage 0 (0–90 min)    full brightness
 //   stage 1 (90–150 min)  dimmed
 //   stage 2 (150 min+)    dimmed, Long Term Low Power (LTLP): dark pause after every few sweeps
@@ -41,8 +42,12 @@ const int half = LEDS_COUNT / 2 + (LEDS_COUNT % 2);
 float KR_speed = 0.1;   // LEDs per frame
 uint8_t KR_tail = 5;
 uint8_t KR_fade = 70;
-CRGB KR_color = CRGB::Red;
+bool KR_randomColor = true;  // true: new random color each time the car turns off
+CRGB KR_color = CRGB::Red;   // color used when KR_randomColor is false
 // ======================================
+
+CRGB KR_activeColor;  // color the scanner is currently using
+uint8_t KR_hue = 0;   // last random hue, so the next one can be kept well away from it
 
 float KR_pos = -5;
 int KR_dir = 1;
@@ -67,6 +72,7 @@ void setup() {
   FastLED.addLeds<WS2815, PIN_LED, GRB>(leds, LEDS_COUNT);
   FastLED.setBrightness(LED_BRIGHT);
   FastLED.clear(true);
+  pickScannerColor();  // covers powering up with the ignition already off
 }
 
 void loop() {
@@ -86,6 +92,7 @@ void loop() {
     drivingLastRefresh = millis();
   }
   if (!ignitionOn && lastIgnition) {
+    pickScannerColor();
     playShutdownAnimation();
     resetToFullStage();
     ignitionOffTime = millis();
@@ -104,7 +111,7 @@ void loop() {
       KR_ltlpSweepCount = 0;
       offStage = 2;
     }
-    updateScanner(KR_color);
+    updateScanner(KR_activeColor);
   }
 
   lastIgnition = ignitionOn;
@@ -117,6 +124,18 @@ void resetToFullStage() {
   KR_paused = false;
   KR_ltlpSweepCount = 0;
   offStage = 0;
+}
+
+// Choose the scanner color for this park: KR_color, or a random fully saturated hue
+// at least 1/8 of the color wheel away from the previous one so it visibly changes.
+void pickScannerColor() {
+  if (!KR_randomColor) {
+    KR_activeColor = KR_color;
+    return;
+  }
+  random16_add_entropy(micros());  // exact ignition-off timing makes the sequence unpredictable
+  KR_hue += random8(32, 225);
+  KR_activeColor = CHSV(KR_hue, 255, 255);
 }
 
 // Blocking wait that keeps the watchdog fed.
@@ -147,9 +166,9 @@ void fillSolidAndHold(CRGB color, uint16_t durationMs) {
 }
 
 void playShutdownAnimation() {
-  fillFromCenter(CRGB::Red, 1000);
-  fillSolidAndHold(CRGB::Red, 400);
-  // Strip is left solid red; updateScanner's per-frame fade blends it into the sweep
+  fillFromCenter(CRGB::White, 1000);
+  fillSolidAndHold(CRGB::White, 400);
+  // Strip is left solid white; updateScanner's per-frame fade blends it into the sweep
 }
 
 // Strip stays dark while driving. Non-blocking so the ignition input is sampled continuously.
